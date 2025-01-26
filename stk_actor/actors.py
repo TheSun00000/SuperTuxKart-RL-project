@@ -2,6 +2,7 @@ import gymnasium as gym
 from bbrl.agents import Agent
 import torch
 import torch.nn as nn
+from .experts import ExpertAgent3
 
 
 class MyWrapper(gym.ActionWrapper):
@@ -45,6 +46,8 @@ class Actor(Agent):
             )
             for out_dim in continuous_dims
         ])
+        
+        self.expert = ExpertAgent3()
     
     
     
@@ -80,21 +83,23 @@ class Actor(Agent):
         state = {}
         for key in keys:
             value = self.get((f'env/env_obs/{key}', t))
-            state[key] = value
-        # Computes probabilities over actions
+            # state[key] = value
+            state[key] = value.squeeze(0)
+                    
         
-        x = self.state_to_tensor(state)
-        shared_output = self.shared_layers(x)
-        continuous_action = torch.stack([head(shared_output) for head in self.continuous_heads], dim=1)
-        discrete_action = torch.stack([head(shared_output) for head in self.discrete_heads], dim=1)
+        # x = self.state_to_tensor(state)
+        # shared_output = self.shared_layers(x)
+        # continuous_action = torch.stack([head(shared_output) for head in self.continuous_heads], dim=1).squeeze(-1).float()
+        # discrete_action = torch.stack([head(shared_output) for head in self.discrete_heads], dim=1).argmax(-1).long()
+
+
+        action_ = self.expert.get_action(state)
+        continuous_action = torch.tensor(action_['continuous']).unsqueeze(0).float()
+        discrete_action   = torch.tensor(action_['discrete']).unsqueeze(0).long()
         
-        action = {
-            'continuous': continuous_action.squeeze(-1),
-            'discrete': discrete_action.argmax(-1).long(),
-        }
-                        
-        self.set(("action/continuous", t), action['continuous'])
-        self.set(("action/discrete", t), action['discrete'])
+        
+        self.set(("action/continuous", t), continuous_action)
+        self.set(("action/discrete", t), discrete_action)
 
 
 class ArgmaxActor(Agent):
