@@ -9,7 +9,7 @@ class ExpertAgent3:
     def __init__(self):
         pass
     
-    def get_action(self, state):
+    def __call__(self, state):
         
         karts_position = state['karts_position']
         kart_distances = np.linalg.norm(karts_position, axis=1)
@@ -48,23 +48,6 @@ class ExpertAgent3:
                     'continuous': np.array([0.5, 0.5]),
                     'discrete': np.array([0, 0, 0, 0, 1])
                 }
-                
-                
-        # if action is None and any(kart_is_close_ahead) :
-            
-        #     kart_position = karts_position[0]
-            
-        #     if 0 < kart_position[0] < 1 and kart_position[2] > 1:
-        #         action = {
-        #             'continuous': np.array([1, -0.5]),
-        #             'discrete': np.array([0, 0, 0, 0, 1])
-        #         }
-                
-        #     elif -1 < kart_position[0] <= 0 and kart_position[2] > 1:                
-        #         action = {
-        #             'continuous': np.array([1, 0.5]),
-        #             'discrete': np.array([0, 0, 0, 0, 1])
-        #         }
                 
 
         if action is None:

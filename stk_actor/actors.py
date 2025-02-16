@@ -2,7 +2,7 @@ import gymnasium as gym
 from bbrl.agents import Agent
 import torch
 import torch.nn as nn
-from .experts import ExpertAgent3
+from .utils import ExpertAgent3
 
 
 class MyWrapper(gym.ActionWrapper):
@@ -48,7 +48,7 @@ class Actor(Agent):
             for i, out_dim in enumerate(continuous_dims)
         ])
         
-        self.expert = ExpertAgent3()
+        self.agent = ExpertAgent3()
     
     
     
@@ -95,7 +95,7 @@ class Actor(Agent):
         # discrete_action = torch.stack([head(shared_output) for head in self.discrete_heads], dim=1).argmax(-1).long()
 
 
-        action = self.expert.get_action(state)
+        action = self.agent(state)
         continuous_action = torch.tensor(action['continuous']).unsqueeze(0).float()
         discrete_action   = torch.tensor(action['discrete']).unsqueeze(0).long()
         
