@@ -5,8 +5,8 @@ def angle_between_vectors(v1, v2):
         cos_theta = np.clip(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)), -1.0, 1.0)
         return np.degrees(np.arccos(cos_theta))
 
-class ExpertAgent3:
-    def __init__(self):
+class CustomAgent:
+    def __init__(self, *args):
         pass
     
     def __call__(self, state):
