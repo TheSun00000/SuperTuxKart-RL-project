@@ -2,6 +2,7 @@ import gymnasium as gym
 from bbrl.agents import Agent
 import torch
 import torch.nn as nn
+from .utils import CustomAgent
 
 
 class MyWrapper(gym.ActionWrapper):
@@ -19,7 +20,7 @@ class Actor(Agent):
     def __init__(self, observation_space, action_space):
         super().__init__(name="NaximActor")
         
-        input_dim, hidden_dim = 49, 256
+        input_dim, hidden_dim = 64, 512
         discrete_dims = [2, 2, 2, 2, 2]
         continuous_dims = [1, 1]
         
@@ -42,16 +43,20 @@ class Actor(Agent):
                 nn.Linear(hidden_dim, hidden_dim),
                 nn.ReLU(),
                 nn.Linear(hidden_dim, out_dim),
+                nn.Sigmoid() if i == 0 else nn.Identity()
             )
-            for out_dim in continuous_dims
+            for i, out_dim in enumerate(continuous_dims)
         ])
+        
+        self.agent = CustomAgent(self.shared_layers, self.discrete_heads, self.continuous_heads)
     
     
     
     def state_to_tensor(self, state):
 
         # continuous_vars = ['is_stuck', 'obstacle_ahead', 'obstacle_position', 'target_position', 'target_distance', 'target_angle']
-        continuous_vars = ['obstacle_ahead', 'obstacle_position', 'powerup', 'previous_actions', 'start_race', 'target_angle', 'target_distance', 'target_position', 'velocity']
+        # continuous_vars = ['obstacle_ahead', 'obstacle_position', 'powerup', 'previous_actions', 'start_race', 'target_angle', 'target_distance', 'target_position', 'velocity']
+        continuous_vars = ['karts_position', 'previous_actions', 'velocity', 'start_race', 'obstacle_ahead', 'obstacle_position', 'target_position', 'target_angle', 'target_distance', 'powerup']
         # print(state.keys())
         continuous_state = []
         for key in continuous_vars:
@@ -80,21 +85,18 @@ class Actor(Agent):
         state = {}
         for key in keys:
             value = self.get((f'env/env_obs/{key}', t))
-            state[key] = value
-        # Computes probabilities over actions
+            # state[key] = value
+            state[key] = value.squeeze(0)
+                    
+
+
+        action = self.agent(state)
+        continuous_action = torch.tensor(action['continuous']).unsqueeze(0).float()
+        discrete_action   = torch.tensor(action['discrete']).unsqueeze(0).long()
         
-        x = self.state_to_tensor(state)
-        shared_output = self.shared_layers(x)
-        continuous_action = torch.stack([head(shared_output) for head in self.continuous_heads], dim=1)
-        discrete_action = torch.stack([head(shared_output) for head in self.discrete_heads], dim=1)
         
-        action = {
-            'continuous': continuous_action.squeeze(-1),
-            'discrete': discrete_action.argmax(-1).long(),
-        }
-                        
-        self.set(("action/continuous", t), action['continuous'])
-        self.set(("action/discrete", t), action['discrete'])
+        self.set(("action/continuous", t), continuous_action)
+        self.set(("action/discrete", t), discrete_action)
 
 
 class ArgmaxActor(Agent):

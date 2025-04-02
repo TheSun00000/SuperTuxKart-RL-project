@@ -127,28 +127,15 @@ class ExpertObservationWrapper(ActionObservationWrapper):
     def __init__(self, env: gym.Env):
         super().__init__(env)
         
-        env.observation_space = gym.spaces.Dict({
-            'start_race': gym.spaces.Box(0, 1, (1,), dtype=np.float32),
-            
-            'attachment': env.observation_space['attachment'],
-            'attachment_time_left': env.observation_space['attachment_time_left'],
-            'powerup': env.observation_space['powerup'],
-            'karts_position': env.observation_space['karts_position'],
-            'velocity': env.observation_space['velocity'],
-            
-            # 'is_stuck': gym.spaces.Box(0, 1, (1,), dtype=np.float32),
-            'obstacle_ahead': gym.spaces.Box(0, 1, (1,), dtype=np.float32),
-            'obstacle_position': gym.spaces.Box(-float('inf'), float('inf'), (3,), dtype=np.float32),
-            'target_position': gym.spaces.Box(-float('inf'), float('inf'), (3,), dtype=np.float32),
-            'target_distance': gym.spaces.Box(-float('inf'), float('inf'), (1,), dtype=np.float32),
-            'target_angle': gym.spaces.Box(-float('inf'), float('inf'), (1,), dtype=np.float32),
-            
-            'previous_actions': env.observation_space['previous_actions'],
-        })
+        env.observation_space['start_race'] = gym.spaces.Box(0, 1, (1,), dtype=np.float32)
         
-        self.env = env
-        
-        self.start_race = np.array([1.0])
+        env.observation_space['obstacle_ahead'] = gym.spaces.Box(0, 1, (1,), dtype=np.float32)
+        env.observation_space['obstacle_position'] = gym.spaces.Box(-float('inf'), float('inf'), (3,), dtype=np.float32)
+        env.observation_space['target_position'] = gym.spaces.Box(-float('inf'), float('inf'), (3,), dtype=np.float32)
+        env.observation_space['target_distance'] = gym.spaces.Box(-float('inf'), float('inf'), (1,), dtype=np.float32)
+        env.observation_space['target_angle'] = gym.spaces.Box(-float('inf'), float('inf'), (1,), dtype=np.float32)
+                
+        self.env = env 
     
     
     def angle_between_vectors(self, v1, v2):
@@ -219,21 +206,19 @@ class ExpertObservationWrapper(ActionObservationWrapper):
         angle = self.angle_between_vectors(np.array([0, 1]), target[[0, 2]]) * sign  #######################
         angle = angle.reshape(1)
 
-        # print(self.env.unwrapped._env.kart_indices)
-        # kart = self.env.unwrapped._env.world.karts[self.env.unwrapped._env.kart_ix]
+        karts = self.env.unwrapped._env.unwrapped.world.karts
+        players = self.env.unwrapped._env.config.players
+        for my_ix in range(len(players)):
+            if players[my_ix].name == 'Naxim':
+                break
+        kart = karts[my_ix]
 
-        new_obseration = {}
+        new_obseration = state
         
-        new_obseration['start_race'] = self.start_race
+        new_obseration['start_race'] = (state['distance_down_track'] < 50)
         
-        new_obseration['powerup'] = state['powerup']
-        new_obseration['attachment'] = state['attachment']
-        new_obseration['attachment_time_left'] = state['attachment_time_left']
-        new_obseration['karts_position'] = state['karts_position']
-        new_obseration['previous_actions'] = state['previous_actions']
-        new_obseration['velocity'] = state['velocity']
+        new_obseration['powerup'] = kart.powerup.type.value
         
-        # new_obseration['is_stuck'] = state['is_stuck']
         new_obseration['obstacle_ahead'] = obstacle_ahead
         new_obseration['obstacle_position'] = obstacle_position if obstacle_ahead else np.full((3,), -1., dtype=np.float32)
         new_obseration['target_position'] = target
@@ -244,7 +229,6 @@ class ExpertObservationWrapper(ActionObservationWrapper):
 
     
     def action(self, action):
-        self.start_race = np.array([0.0])
         return action
 
     
